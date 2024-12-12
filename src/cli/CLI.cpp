@@ -19,7 +19,7 @@ namespace CLI
 
     void ProcessQuery(MutationData &mutationData)
     {
-        std::cout << "AS" << std::endl;
+        // std::cout << "AS" << std::endl;
         Mutator mutator;
         mutator.Mutate(mutationData);
     }

@@ -3,12 +3,12 @@
 class TreeNode
 {
 public:
-    vector<TreeNode *> children;
+    vector<TreeNode *> children = {};
     string query;
 
 public:
-    TreeNode(const string &query);
+    TreeNode(string query);
     ~TreeNode();
 
-    void AddMutantChildren(const string &mutant_query);
+    void AddMutantChildren(string mutant_query);
 };

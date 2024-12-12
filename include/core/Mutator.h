@@ -1,6 +1,7 @@
 #pragma once
 #include "MutantTree.h"
 #include <algorithm>
+#include <regex>
 
 struct MutationData
 {
@@ -16,7 +17,9 @@ enum MutationOperator
 {
     SELECT,
     JOIN,
-    RELATIONAL
+    RELATIONAL_OR, // relatinal operator
+    LOGICAL_COR,   // logical connector operator
+    UNARY_IOR,
 };
 
 class Mutator
@@ -26,7 +29,10 @@ public:
 
     void SEL_operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
     void JOI_operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void ROR_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void UOI_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
 
 private:
     void InternalMutate(std::string &query, MutationData &mutationData, TreeNode *mutantTree, MutationOperator operatr);
+    void ROR_OperatorComplex(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
 };
