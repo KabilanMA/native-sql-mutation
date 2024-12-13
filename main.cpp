@@ -59,15 +59,17 @@ int main()
         }
 
         is_processing = true;
-        thread spinner_thread(CLI::Spinner, ref(is_processing));
+        // thread spinner_thread(CLI::Spinner, ref(is_processing));
 
         MutationData mutationData(query);
         CLI::ProcessQuery(mutationData);
 
-        // for (auto mutant : mutationData.mutated_queries)
-        // {
-        //     cout << mutant << endl;
-        // }
+        for (auto mutant : mutationData.mutated_queries)
+        {
+            cout << mutant << endl;
+        }
+
+        cout << "Total Mutant Count: " << mutationData.mutated_queries.size() << endl;
 
         // duckdb_database db;
         // duckdb_connection con;
