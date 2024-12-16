@@ -8,3 +8,4 @@
 ### Sample SQL Statements
 
 1. SELECT col1, col2 from t1 LEFT JOIN t2 ON t1.v=t2.r WHERE t1.col3>10 AND t1.col3<20;
+2. SELECT col1, col2 from t1 LEFT JOIN t2 ON t1.v=t2.r WHERE t1.col3>10 AND t1.col3<20 OR t2.col>30;

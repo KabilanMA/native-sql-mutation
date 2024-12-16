@@ -32,7 +32,7 @@ void Mutator::SEL_operator(std::string query, MutationData &mutationData, TreeNo
     return;
 }
 
-int countKeyword(const std::string &query, const std::string &keyword)
+int countKeyword(const std::string &query, std::string keyword)
 {
     size_t pos = 0;
     int count = 0;
@@ -51,6 +51,32 @@ int countKeyword(const std::string &query, const std::string &keyword)
     return count;
 }
 
+void addWhereClauseMutants(std::string query, size_t start_pos, size_t end_pos, MutationData &mutationData, TreeNode *mutantTreeNode)
+{
+    const std::string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
+    std::string clause = query.substr(start_pos, end_pos - start_pos);
+
+    for (const auto &mutant_operator : mutant_operators)
+    {
+        size_t operator_pos = clause.find(mutant_operator);
+        if (operator_pos != std::string::npos)
+        {
+            for (const auto &replacement_operator : mutant_operators)
+            {
+                if (mutant_operator != replacement_operator)
+                {
+                    std::string mutated_query = query;
+                    mutated_query.replace(start_pos + operator_pos, mutant_operator.length(), replacement_operator);
+
+                    mutantTreeNode->AddMutantChildren(mutated_query);
+                    mutationData.mutated_queries.push_back(mutated_query);
+                }
+            }
+            break;
+        }
+    }
+}
+
 void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode, size_t start_pos, size_t end_pos)
 {
     const std::string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
@@ -59,34 +85,22 @@ void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, Tr
 
     size_t a = lower_query.rfind(" and ", end_pos - 1);
     size_t b = lower_query.rfind(" or ", end_pos - 1);
-    // cout << lower_query << endl;
-    // cout << lower_query[a + 1] << endl;
-    // cout << "end_pos: " << end_pos << endl;
-    // cout << "a: " << a << endl;
-    // cout << "b: " << b << endl;
 
     if (a == std::string::npos)
     {
         if (b == std::string::npos)
         {
-            // actual mutation to the comparison operator
-
             std::string clause = query.substr(start_pos, end_pos - start_pos);
-
-            // cout << "1" << endl;
-            // cout << clause << endl;
 
             for (const auto &mutant_operator : mutant_operators)
             {
                 size_t operator_pos = clause.find(mutant_operator);
                 if (operator_pos != std::string::npos)
                 {
-                    // cout << "2" << endl;
                     for (const auto &replacement_operator : mutant_operators)
                     {
                         if (mutant_operator != replacement_operator)
                         {
-                            // cout << "3" << endl;
                             std::string mutated_query = query;
                             mutated_query.replace(start_pos + operator_pos, mutant_operator.length(), replacement_operator);
 
@@ -101,6 +115,32 @@ void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, Tr
         else
         {
             ROR_OperatorComplexHelper(query, mutationData, mutantTreeNode, start_pos, b);
+
+            size_t end_pos_temp = std::min(lower_query.find(" ", b + 4), lower_query.find(";", b + 4));
+
+            std::string clause = query.substr(b + 4, end_pos_temp - (b + 4));
+
+            for (const auto &mutant_operator : mutant_operators)
+            {
+                size_t operator_pos = clause.find(mutant_operator);
+                if (operator_pos != std::string::npos)
+                {
+                    for (const auto &replacement_operator : mutant_operators)
+                    {
+                        if (mutant_operator != replacement_operator)
+                        {
+                            std::string mutated_query = query;
+                            mutated_query.replace(b + 4 + operator_pos, mutant_operator.length(), replacement_operator);
+
+                            mutantTreeNode->AddMutantChildren(mutated_query);
+                            mutationData.mutated_queries.push_back(mutated_query);
+                            // cout << mutated_query << endl;
+                            ROR_OperatorComplexHelper(mutated_query, mutationData, mutantTreeNode, start_pos, b);
+                        }
+                    }
+                    break;
+                }
+            }
         }
     }
     else
@@ -113,27 +153,22 @@ void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, Tr
 
             std::string clause = query.substr(a + 5, end_pos_temp - (a + 5));
 
-            // cout << "1" << endl;
-            // cout << clause << endl;
-
             for (const auto &mutant_operator : mutant_operators)
             {
                 size_t operator_pos = clause.find(mutant_operator);
                 if (operator_pos != std::string::npos)
                 {
-                    // cout << "2" << endl;
                     for (const auto &replacement_operator : mutant_operators)
                     {
                         if (mutant_operator != replacement_operator)
                         {
-                            // cout << "3" << endl;
                             std::string mutated_query = query;
                             mutated_query.replace(a + 5 + operator_pos, mutant_operator.length(), replacement_operator);
 
                             mutantTreeNode->AddMutantChildren(mutated_query);
                             mutationData.mutated_queries.push_back(mutated_query);
                             // cout << mutated_query << endl;
-                            // ROR_OperatorComplexHelper(query, mutationData, mutantTreeNode, start_pos, 0);
+                            ROR_OperatorComplexHelper(mutated_query, mutationData, mutantTreeNode, start_pos, a);
                         }
                     }
                     break;
@@ -142,20 +177,90 @@ void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, Tr
         }
         else
         {
-            size_t capped_pos = std::max(a, b);
+            size_t capped_pos = std::min(a, b);
+            size_t size = 4;
+            if (a == capped_pos)
+            {
+                size = 5;
+            }
             ROR_OperatorComplexHelper(query, mutationData, mutantTreeNode, start_pos, capped_pos);
+
+            size_t end_pos_temp = std::min(lower_query.find(" ", capped_pos + size), lower_query.find(";", capped_pos + size));
+
+            std::string clause = query.substr(capped_pos + size, end_pos_temp - (capped_pos + size));
+
+            for (const auto &mutant_operator : mutant_operators)
+            {
+                size_t operator_pos = clause.find(mutant_operator);
+                if (operator_pos != std::string::npos)
+                {
+                    for (const auto &replacement_operator : mutant_operators)
+                    {
+                        if (mutant_operator != replacement_operator)
+                        {
+                            std::string mutated_query = query;
+                            mutated_query.replace(capped_pos + size + operator_pos, mutant_operator.length(), replacement_operator);
+
+                            mutantTreeNode->AddMutantChildren(mutated_query);
+                            mutationData.mutated_queries.push_back(mutated_query);
+                            // cout << mutated_query << endl;
+                            ROR_OperatorComplexHelper(mutated_query, mutationData, mutantTreeNode, start_pos, capped_pos);
+                        }
+                    }
+                    break;
+                }
+            }
         }
+    }
+}
+
+std::vector<std::string> splitOperators(const std::string &input)
+{
+    std::vector<std::string> result;
+    std::istringstream stream(input);
+    std::string word;
+    while (stream >> word)
+    {
+        result.push_back(word);
+    }
+    return result;
+}
+
+void generatePermutationOfConjunction(int and_count, int or_count, std::string value, std::vector<std::vector<std::string>> &permutations)
+{
+    if (and_count == 0 || or_count == 0)
+    {
+        std::vector<std::string> result;
+        std::istringstream stream(value);
+        std::string word;
+        while (stream >> word)
+        {
+            result.push_back(word);
+        }
+        permutations.push_back(result);
+        return;
+    }
+
+    if (and_count > 0)
+    {
+        generatePermutationOfConjunction(and_count - 1, or_count, value + (value.empty() ? "" : " ") + "AND", permutations);
+    }
+
+    if (or_count > 0)
+    {
+        generatePermutationOfConjunction(and_count - 1, or_count, value + (value.empty() ? "" : " ") + "OR", permutations);
     }
 }
 
 void Mutator::ROR_OperatorComplex(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode)
 {
-    // cout << "Complex Where clause function called" << endl;
     std::string lower_query = query;
     std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
     size_t where_pos = lower_query.find(" where ");
-    size_t conjective_operator_count = countKeyword(lower_query, " and ");
-    conjective_operator_count += countKeyword(lower_query, " or ");
+    size_t conjective_operator_count = countKeyword(lower_query, "and");
+    conjective_operator_count += countKeyword(lower_query, "or");
+    // cout << conjective_operator_count << endl;
+    // cout << lower_query << endl;
     const std::string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
 
     size_t search_start_pos = where_pos + 7;
@@ -170,31 +275,40 @@ void Mutator::ROR_OperatorComplex(std::string query, MutationData &mutationData,
     // size_t last_conj_pos = std::max(lower_query.rfind(" and ") + 5, lower_query.rfind(" or ") + 4);
     // size_t end_pos = lower_query.find(" ", std::max(lower_query.rfind(" and ") + 5, lower_query.rfind(" or ") + 4));
 
-    for (size_t i = 0; i < std::pow(2, conjective_operator_count); i++)
+    std::vector<std::vector<std::string>> conjective_operator_permutations = {};
+    generatePermutationOfConjunction(conjective_operator_count, conjective_operator_count, {}, conjective_operator_permutations);
+
+    for (size_t j = 0; j < conjective_operator_permutations.size(); j++)
     {
-        ROR_OperatorComplexHelper(query, mutationData, mutantTreeNode, search_start_pos, end_pos);
+        // conjective_operator_count;
+        size_t count = 0;
+        std::string mutated_query = query;
+        lower_query = mutated_query;
+        std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
+
+        for (size_t i = search_start_pos; i < end_pos - 3; i++)
+        {
+            if (lower_query[i] == 'a')
+            {
+                if (lower_query[i + 1] == 'n' && lower_query[i + 2] == 'd' && lower_query[i + 3] == ' ' && lower_query[i - 1] == ' ')
+                {
+                    mutated_query.replace(i, 3, conjective_operator_permutations[j][count++]);
+                    lower_query = mutated_query;
+                    std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
+                }
+            }
+            else if (lower_query[i] == 'o')
+            {
+                if (lower_query[i + 1] == 'r' && lower_query[i + 2] == ' ' && lower_query[i - 1] == ' ')
+                {
+                    mutated_query.replace(i, 2, conjective_operator_permutations[j][count++]);
+                    lower_query = mutated_query;
+                    std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
+                }
+            }
+        }
+        ROR_OperatorComplexHelper(mutated_query, mutationData, mutantTreeNode, search_start_pos, end_pos);
     }
-
-    // std::string clause = query.substr(clause_start);
-    // for (const auto &mutant_operator : mutant_operators)
-    // {
-    //     size_t operator_pos = lower_query.find(mutant_operator, pos_search);
-    //     if (operator_pos != std::string::npos)
-    //     {
-    //         for (const auto &replacement_operator : mutant_operators)
-    //         {
-    //             if (mutant_operator != replacement_operator)
-    //             {
-    //                 std::string mutated_query = query;
-    //                 mutated_query.replace(pos_search + operator_pos, mutant_operator.length(), replacement_operator);
-
-    //                 mutantTreeNode->AddMutantChildren(mutated_query);
-    //                 mutationData.mutated_queries.push_back(mutated_query);
-    //             }
-    //         }
-    //         break;
-    //     }
-    // }
 }
 
 void Mutator::ROR_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode)
@@ -244,7 +358,6 @@ void Mutator::ROR_Operator(std::string query, MutationData &mutationData, TreeNo
         }
         else
         {
-            // cout << "Complex Where clause" << endl;
             ROR_OperatorComplex(query, mutationData, mutantTreeNode);
         }
     }
