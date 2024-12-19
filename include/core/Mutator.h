@@ -34,5 +34,5 @@ public:
 
 private:
     void InternalMutate(std::string &query, MutationData &mutationData, TreeNode *mutantTree, MutationOperator operatr);
-    void ROR_OperatorComplex(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void ROR_OperatorComplex(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode, std::string clause);
 };

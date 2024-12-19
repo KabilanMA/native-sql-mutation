@@ -252,18 +252,20 @@ void generatePermutationOfConjunction(int and_count, int or_count, std::string v
     }
 }
 
-void Mutator::ROR_OperatorComplex(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode)
+void Mutator::ROR_OperatorComplex(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode, std::string clause)
 {
     std::string lower_query = query;
     std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
-    size_t where_pos = lower_query.find(" where ");
+    size_t where_pos = lower_query.find(clause);
     size_t conjective_operator_count = countKeyword(lower_query, "and");
     conjective_operator_count += countKeyword(lower_query, "or");
+    if (where_pos == std::string::npos || conjective_operator_count == 0)
+        return;
     // cout << conjective_operator_count << endl;
     // cout << lower_query << endl;
     const std::string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
 
-    size_t search_start_pos = where_pos + 7;
+    size_t search_start_pos = where_pos + clause.size();
 
     size_t last_and_pos = lower_query.rfind(" and ");
     last_and_pos = last_and_pos == std::string::npos ? -2 : last_and_pos;
@@ -358,7 +360,11 @@ void Mutator::ROR_Operator(std::string query, MutationData &mutationData, TreeNo
         }
         else
         {
-            ROR_OperatorComplex(query, mutationData, mutantTreeNode);
+            if (where_pos != std::string::npos)
+                ROR_OperatorComplex(query, mutationData, mutantTreeNode, " where ");
+
+            if (having_pos != std::string::npos)
+                ROR_OperatorComplex(query, mutationData, mutantTreeNode, " having ");
         }
     }
     return;
@@ -381,7 +387,7 @@ std::string excludeExistsSelects(const std::string &query, const std::regex &exi
     return std::regex_replace(query, exists_regex, ""); // Remove EXISTS subquery portions
 }
 
-std::string generateMutation(const std::string &query, size_t pos, const std::string &old_value, const std::string &new_value)
+std::string mutateStringWithNew(const std::string &query, size_t pos, const std::string &old_value, const std::string &new_value)
 {
     std::string mutated_query = query;
     mutated_query.replace(pos, old_value.length(), new_value);
@@ -396,39 +402,29 @@ void Mutator::UOI_Operator(std::string query, MutationData &mutationData, TreeNo
      */
 
     std::string processed_query = query;
+    std::transform(processed_query.begin(), processed_query.end(), processed_query.begin(), ::tolower);
 
-    // Exclude GROUP BY and ORDER BY clauses
-    size_t group_by_pos = findClause(processed_query, "group by");
-    size_t order_by_pos = findClause(processed_query, "order by");
-    std::string excluded_portion = excludeClauses(processed_query, group_by_pos, order_by_pos);
-
-    // Exclude select-list in EXISTS subqueries
-    std::regex exists_regex(R"(exists\s*\(\s*select\b.*?\))", std::regex_constants::icase);
-    excluded_portion = excludeExistsSelects(excluded_portion, exists_regex);
-
-    // Find arithmetic expressions and numbers
-    std::regex number_regex(R"((\b\d+\b))"); // Regex to match numbers
+    std::regex number_regex(R"((\b\d+\b))");
     std::smatch match;
-    while (std::regex_search(excluded_portion, match, number_regex))
+
+    while (std::regex_search(processed_query, match, number_regex))
     {
         std::string number = match.str(0);
         size_t number_pos = match.position(0);
 
-        // Generate mutations
-        std::string mutation_neg = generateMutation(processed_query, number_pos, number, "-" + number);
-        std::string mutation_add = generateMutation(processed_query, number_pos, number, number + " + 1");
-        std::string mutation_sub = generateMutation(processed_query, number_pos, number, number + " - 1");
+        std::string mutation_neg = mutateStringWithNew(processed_query, number_pos, number, "-" + number);
+        mutantTreeNode->AddMutantChildren(mutation_neg);
+        mutationData.mutated_queries.push_back(mutation_neg);
 
-        // // Apply mutator's processing
-        // if (!mutation_neg.empty())
-        //     mutated_queries.push_back(mutator(mutation_neg));
-        // if (!mutation_add.empty())
-        //     mutated_queries.push_back(mutator(mutation_add));
-        // if (!mutation_sub.empty())
-        //     mutated_queries.push_back(mutator(mutation_sub));
+        std::string mutation_add = mutateStringWithNew(processed_query, number_pos, number, number + "+1");
+        mutantTreeNode->AddMutantChildren(mutation_add);
+        mutationData.mutated_queries.push_back(mutation_add);
 
-        // Update search space
-        excluded_portion = excluded_portion.substr(number_pos + number.length());
+        std::string mutation_sub = mutateStringWithNew(processed_query, number_pos, number, number + "-1");
+        mutantTreeNode->AddMutantChildren(mutation_sub);
+        mutationData.mutated_queries.push_back(mutation_sub);
+
+        processed_query = match.suffix().str();
     }
 }
 

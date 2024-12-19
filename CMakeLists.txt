@@ -17,6 +17,7 @@ add_executable(mutant
     src/core/Mutator.cpp
     src/core/MutantTree.cpp
     src/core/TreeNode.cpp
+    src/core/Comparator.cpp
 )
 
 # Link DuckDB library
