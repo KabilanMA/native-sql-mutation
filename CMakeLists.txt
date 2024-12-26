@@ -3,14 +3,14 @@ project(mutant)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Add directories for includes
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+
+
 include_directories(include)
 include_directories(${CMAKE_SOURCE_DIR}/third_party/duckdb/src/include)
 
-# Add DuckDB library
 link_directories(${CMAKE_SOURCE_DIR}/third_party/duckdb/build/release/src)
 
-# Add source files
 add_executable(mutant
     main.cpp
     src/cli/CLI.cpp

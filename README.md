@@ -17,6 +17,7 @@
 
 7. CREATE TABLE my_table (id INT PRIMARY KEY, name VARCHAR(50) NOT NULL, age INT, address VARCHAR(100));
 8. INSERT INTO my_table (id, name, age, address) VALUES (1, 'Alice', 25, '123 Maple Street'), (2, 'Bob', 30, '456 Oak Avenue'), (3, 'Charlie', 22, '789 Pine Road'), (4, 'Diana', 27, '321 Elm Street'), (5, 'Ethan', 32, '654 Birch Lane'), (6, 'Fiona', 28, '987 Cedar Drive'), (7, 'George', 24, '741 Walnut Way'), (8, 'Hannah', 26, '852 Cherry Court'), (9, 'Ian', 29, '963 Ash Boulevard'), (10, 'Jack', 31, '369 Magnolia Circle'), (11, 'Kathy', 23, '147 Willow Lane'), (12, 'Liam', 30, '258 Maple Avenue'), (13, 'Mia', 21, '369 Spruce Street'), (14, 'Noah', 27, '123 Poplar Road'), (15, 'Olivia', 33, '456 Alder Court'), (16, 'Paul', 26, '789 Sycamore Lane'), (17, 'Quincy', 28, '321 Palm Drive'), (18, 'Rachel', 24, '654 Pine Avenue'), (19, 'Steve', 29, '987 Aspen Road'), (20, 'Tina', 25, '741 Beech Street');
-9. SELECT \* FROM my_table WHERE id < 20;
-10. SELECT \* FROM my_table WHERE id < 10 ORDER BY name;
-11. SELECT id, name FROM my_table WHERE id < 10;
+9. SELECT col1 FROM my_table WHERE id<20;
+10. SELECT col1 FROM my_table WHERE id<10 ORDER BY name;
+11. SELECT id, name FROM my_table WHERE id<10;
+12. SELECT col1 FROM table WHERE id BETWEEN 10 AND 20;

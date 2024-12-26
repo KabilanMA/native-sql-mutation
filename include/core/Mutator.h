@@ -18,8 +18,11 @@ enum MutationOperator
     SELECT,
     JOIN,
     RELATIONAL_OR, // relatinal operator
-    LOGICAL_COR,   // logical connector operator
+    LOGICAL_CR,    // logical connector operator
     UNARY_IOR,
+    LOGICAL_AOR,
+    BTW_OP,
+    LKE_OP
 };
 
 class Mutator
@@ -31,6 +34,8 @@ public:
     void JOI_operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
     void ROR_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
     void UOI_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void AOR_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void BTW_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTree);
 
 private:
     void InternalMutate(std::string &query, MutationData &mutationData, TreeNode *mutantTree, MutationOperator operatr);

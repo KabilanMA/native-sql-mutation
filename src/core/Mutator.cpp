@@ -1,14 +1,14 @@
 #include "core/Mutator.h"
 #include <cmath>
 
-void Mutator::SEL_operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode)
+void Mutator::SEL_operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode)
 {
     mutantTreeNode->AddMutantChildren(query);
-    std::string lower_query = query;
+    string lower_query = query;
     std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
 
     size_t dis_pos = lower_query.find("distinct");
-    if (dis_pos != std::string::npos)
+    if (dis_pos != string::npos)
     {
         // distinct clause exists
         query.erase(dis_pos, 9); // Length of "DISTINCT" is 8 but erase 9 to remove an extra space too
@@ -18,7 +18,7 @@ void Mutator::SEL_operator(std::string query, MutationData &mutationData, TreeNo
     else
     {
         size_t select_pos = lower_query.find("select");
-        if (select_pos != std::string::npos)
+        if (select_pos != string::npos)
         {
             query.insert(select_pos + 6, " DISTINCT");
             mutantTreeNode->AddMutantChildren(query);
@@ -26,19 +26,19 @@ void Mutator::SEL_operator(std::string query, MutationData &mutationData, TreeNo
         }
         else
         {
-            std::cerr << "Error: 'SELECT' keyword not found in query." << std::endl;
+            std::cerr << "Error: 'SELECT' keyword not found in query." << endl;
         }
     }
     return;
 }
 
-int countKeyword(const std::string &query, std::string keyword)
+int countKeyword(const string &query, string keyword)
 {
     size_t pos = 0;
     int count = 0;
     // std::string keyword = "AND";
 
-    while ((pos = query.find(keyword, pos)) != std::string::npos)
+    while ((pos = query.find(keyword, pos)) != string::npos)
     {
         bool is_start_valid = (pos == 0 || !std::isalnum(query[pos - 1]));
         bool is_end_valid = (pos + keyword.length() == query.length() || !std::isalnum(query[pos + keyword.length()]));
@@ -51,21 +51,21 @@ int countKeyword(const std::string &query, std::string keyword)
     return count;
 }
 
-void addWhereClauseMutants(std::string query, size_t start_pos, size_t end_pos, MutationData &mutationData, TreeNode *mutantTreeNode)
+void addWhereClauseMutants(string query, size_t start_pos, size_t end_pos, MutationData &mutationData, TreeNode *mutantTreeNode)
 {
-    const std::string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
-    std::string clause = query.substr(start_pos, end_pos - start_pos);
+    const string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
+    string clause = query.substr(start_pos, end_pos - start_pos);
 
     for (const auto &mutant_operator : mutant_operators)
     {
         size_t operator_pos = clause.find(mutant_operator);
-        if (operator_pos != std::string::npos)
+        if (operator_pos != string::npos)
         {
             for (const auto &replacement_operator : mutant_operators)
             {
                 if (mutant_operator != replacement_operator)
                 {
-                    std::string mutated_query = query;
+                    string mutated_query = query;
                     mutated_query.replace(start_pos + operator_pos, mutant_operator.length(), replacement_operator);
 
                     mutantTreeNode->AddMutantChildren(mutated_query);
@@ -77,31 +77,31 @@ void addWhereClauseMutants(std::string query, size_t start_pos, size_t end_pos, 
     }
 }
 
-void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode, size_t start_pos, size_t end_pos)
+void ROR_OperatorComplexHelper(string query, MutationData &mutationData, TreeNode *mutantTreeNode, size_t start_pos, size_t end_pos)
 {
-    const std::string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
-    std::string lower_query = query;
+    const string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
+    string lower_query = query;
     std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
 
     size_t a = lower_query.rfind(" and ", end_pos - 1);
     size_t b = lower_query.rfind(" or ", end_pos - 1);
 
-    if (a == std::string::npos)
+    if (a == string::npos)
     {
-        if (b == std::string::npos)
+        if (b == string::npos)
         {
-            std::string clause = query.substr(start_pos, end_pos - start_pos);
+            string clause = query.substr(start_pos, end_pos - start_pos);
 
             for (const auto &mutant_operator : mutant_operators)
             {
                 size_t operator_pos = clause.find(mutant_operator);
-                if (operator_pos != std::string::npos)
+                if (operator_pos != string::npos)
                 {
                     for (const auto &replacement_operator : mutant_operators)
                     {
                         if (mutant_operator != replacement_operator)
                         {
-                            std::string mutated_query = query;
+                            string mutated_query = query;
                             mutated_query.replace(start_pos + operator_pos, mutant_operator.length(), replacement_operator);
 
                             mutantTreeNode->AddMutantChildren(mutated_query);
@@ -118,18 +118,18 @@ void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, Tr
 
             size_t end_pos_temp = std::min(lower_query.find(" ", b + 4), lower_query.find(";", b + 4));
 
-            std::string clause = query.substr(b + 4, end_pos_temp - (b + 4));
+            string clause = query.substr(b + 4, end_pos_temp - (b + 4));
 
             for (const auto &mutant_operator : mutant_operators)
             {
                 size_t operator_pos = clause.find(mutant_operator);
-                if (operator_pos != std::string::npos)
+                if (operator_pos != string::npos)
                 {
                     for (const auto &replacement_operator : mutant_operators)
                     {
                         if (mutant_operator != replacement_operator)
                         {
-                            std::string mutated_query = query;
+                            string mutated_query = query;
                             mutated_query.replace(b + 4 + operator_pos, mutant_operator.length(), replacement_operator);
 
                             mutantTreeNode->AddMutantChildren(mutated_query);
@@ -145,24 +145,24 @@ void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, Tr
     }
     else
     {
-        if (b == std::string::npos)
+        if (b == string::npos)
         {
             ROR_OperatorComplexHelper(query, mutationData, mutantTreeNode, start_pos, a);
 
             size_t end_pos_temp = std::min(lower_query.find(" ", a + 5), lower_query.find(";", a + 5));
 
-            std::string clause = query.substr(a + 5, end_pos_temp - (a + 5));
+            string clause = query.substr(a + 5, end_pos_temp - (a + 5));
 
             for (const auto &mutant_operator : mutant_operators)
             {
                 size_t operator_pos = clause.find(mutant_operator);
-                if (operator_pos != std::string::npos)
+                if (operator_pos != string::npos)
                 {
                     for (const auto &replacement_operator : mutant_operators)
                     {
                         if (mutant_operator != replacement_operator)
                         {
-                            std::string mutated_query = query;
+                            string mutated_query = query;
                             mutated_query.replace(a + 5 + operator_pos, mutant_operator.length(), replacement_operator);
 
                             mutantTreeNode->AddMutantChildren(mutated_query);
@@ -187,18 +187,18 @@ void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, Tr
 
             size_t end_pos_temp = std::min(lower_query.find(" ", capped_pos + size), lower_query.find(";", capped_pos + size));
 
-            std::string clause = query.substr(capped_pos + size, end_pos_temp - (capped_pos + size));
+            string clause = query.substr(capped_pos + size, end_pos_temp - (capped_pos + size));
 
             for (const auto &mutant_operator : mutant_operators)
             {
                 size_t operator_pos = clause.find(mutant_operator);
-                if (operator_pos != std::string::npos)
+                if (operator_pos != string::npos)
                 {
                     for (const auto &replacement_operator : mutant_operators)
                     {
                         if (mutant_operator != replacement_operator)
                         {
-                            std::string mutated_query = query;
+                            string mutated_query = query;
                             mutated_query.replace(capped_pos + size + operator_pos, mutant_operator.length(), replacement_operator);
 
                             mutantTreeNode->AddMutantChildren(mutated_query);
@@ -214,11 +214,11 @@ void ROR_OperatorComplexHelper(std::string query, MutationData &mutationData, Tr
     }
 }
 
-std::vector<std::string> splitOperators(const std::string &input)
+std::vector<std::string> splitOperators(const string &input)
 {
-    std::vector<std::string> result;
+    vector<string> result;
     std::istringstream stream(input);
-    std::string word;
+    string word;
     while (stream >> word)
     {
         result.push_back(word);
@@ -226,13 +226,13 @@ std::vector<std::string> splitOperators(const std::string &input)
     return result;
 }
 
-void generatePermutationOfConjunction(int and_count, int or_count, std::string value, std::vector<std::vector<std::string>> &permutations)
+void generatePermutationOfConjunction(int and_count, int or_count, string value, vector<vector<string>> &permutations)
 {
     if (and_count == 0 || or_count == 0)
     {
-        std::vector<std::string> result;
+        vector<string> result;
         std::istringstream stream(value);
-        std::string word;
+        string word;
         while (stream >> word)
         {
             result.push_back(word);
@@ -252,39 +252,39 @@ void generatePermutationOfConjunction(int and_count, int or_count, std::string v
     }
 }
 
-void Mutator::ROR_OperatorComplex(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode, std::string clause)
+void Mutator::ROR_OperatorComplex(string query, MutationData &mutationData, TreeNode *mutantTreeNode, string clause)
 {
-    std::string lower_query = query;
+    string lower_query = query;
     std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
     size_t where_pos = lower_query.find(clause);
     size_t conjective_operator_count = countKeyword(lower_query, "and");
     conjective_operator_count += countKeyword(lower_query, "or");
-    if (where_pos == std::string::npos || conjective_operator_count == 0)
+    if (where_pos == string::npos || conjective_operator_count == 0)
         return;
     // cout << conjective_operator_count << endl;
     // cout << lower_query << endl;
-    const std::string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
+    const string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
 
     size_t search_start_pos = where_pos + clause.size();
 
     size_t last_and_pos = lower_query.rfind(" and ");
-    last_and_pos = last_and_pos == std::string::npos ? -2 : last_and_pos;
+    last_and_pos = last_and_pos == string::npos ? -2 : last_and_pos;
     size_t last_or_pos = lower_query.rfind(" or ");
-    last_or_pos = last_or_pos == std::string::npos ? -1 : last_or_pos;
+    last_or_pos = last_or_pos == string::npos ? -1 : last_or_pos;
     size_t last_conj_pos = std::max(last_and_pos + 5, last_or_pos + 4);
     size_t end_pos = lower_query.find(" ", last_conj_pos);
-    end_pos = end_pos == std::string::npos ? lower_query.find(";", last_conj_pos) : end_pos;
+    end_pos = end_pos == string::npos ? lower_query.find(";", last_conj_pos) : end_pos;
     // size_t last_conj_pos = std::max(lower_query.rfind(" and ") + 5, lower_query.rfind(" or ") + 4);
     // size_t end_pos = lower_query.find(" ", std::max(lower_query.rfind(" and ") + 5, lower_query.rfind(" or ") + 4));
 
-    std::vector<std::vector<std::string>> conjective_operator_permutations = {};
+    vector<vector<string>> conjective_operator_permutations = {};
     generatePermutationOfConjunction(conjective_operator_count, conjective_operator_count, {}, conjective_operator_permutations);
 
     for (size_t j = 0; j < conjective_operator_permutations.size(); j++)
     {
         // conjective_operator_count;
         size_t count = 0;
-        std::string mutated_query = query;
+        string mutated_query = query;
         lower_query = mutated_query;
         std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
 
@@ -313,41 +313,41 @@ void Mutator::ROR_OperatorComplex(std::string query, MutationData &mutationData,
     }
 }
 
-void Mutator::ROR_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode)
+void Mutator::ROR_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode)
 {
     /**
      * @brief Mutate the relational operator (<,<=,=,>,>=,<>) with each other
      *
      */
 
-    const std::string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
+    const string mutant_operators[] = {"<", "<=", "=", ">", ">=", "<>"};
 
-    std::string lower_query = query;
+    string lower_query = query;
 
     std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
 
     size_t where_pos = lower_query.find(" where ");
     size_t having_pos = lower_query.find(" having ");
 
-    if (where_pos != std::string::npos || having_pos != std::string::npos)
+    if (where_pos != string::npos || having_pos != string::npos)
     {
         size_t and_pos = lower_query.find(" and ");
         size_t or_pos = lower_query.find(" or ");
-        if (and_pos == std::string::npos && or_pos == std::string::npos)
+        if (and_pos == string::npos && or_pos == string::npos)
         {
-            size_t clause_start = (where_pos != std::string::npos) ? where_pos : having_pos;
-            std::string clause = query.substr(clause_start);
+            size_t clause_start = (where_pos != string::npos) ? where_pos : having_pos;
+            string clause = query.substr(clause_start);
 
             for (const auto &mutant_operator : mutant_operators)
             {
                 size_t operator_pos = clause.find(mutant_operator);
-                if (operator_pos != std::string::npos)
+                if (operator_pos != string::npos)
                 {
                     for (const auto &replacement_operator : mutant_operators)
                     {
                         if (mutant_operator != replacement_operator)
                         {
-                            std::string mutated_query = query;
+                            string mutated_query = query;
                             mutated_query.replace(clause_start + operator_pos, mutant_operator.length(), replacement_operator);
 
                             mutantTreeNode->AddMutantChildren(mutated_query);
@@ -360,75 +360,192 @@ void Mutator::ROR_Operator(std::string query, MutationData &mutationData, TreeNo
         }
         else
         {
-            if (where_pos != std::string::npos)
+            if (where_pos != string::npos)
                 ROR_OperatorComplex(query, mutationData, mutantTreeNode, " where ");
 
-            if (having_pos != std::string::npos)
+            if (having_pos != string::npos)
                 ROR_OperatorComplex(query, mutationData, mutantTreeNode, " having ");
         }
     }
     return;
 }
 
-size_t findClause(const std::string &query, const std::string &clause)
+size_t findClause(const string &query, const string &clause, size_t start_pos = 0, size_t end_pos = 0)
 {
-    size_t pos = query.find(clause);
-    return (pos != std::string::npos) ? pos : query.length();
+    if (end_pos == 0 || end_pos < start_pos)
+    {
+        end_pos = string::npos;
+    }
+
+    size_t character_counts_search = (end_pos == string::npos) ? (query.length() - start_pos) : end_pos - start_pos;
+    size_t substring_pos = query.substr(start_pos, character_counts_search).find(clause);
+    size_t pos = (substring_pos != string::npos) ? start_pos + substring_pos : string::npos;
+    return (pos != string::npos && pos < end_pos) ? pos : query.length();
 }
 
-static std::string excludeClauses(const std::string &query, size_t group_by_pos, size_t order_by_pos)
+static string excludeClauses(const string &query, size_t group_by_pos, size_t order_by_pos)
 {
     size_t exclude_start = std::min(group_by_pos, order_by_pos);
     return query.substr(0, exclude_start);
 }
 
-std::string excludeExistsSelects(const std::string &query, const std::regex &exists_regex)
+string excludeExistsSelects(const string &query, const std::regex &exists_regex)
 {
     return std::regex_replace(query, exists_regex, ""); // Remove EXISTS subquery portions
 }
 
-std::string mutateStringWithNew(const std::string &query, size_t pos, const std::string &old_value, const std::string &new_value)
+string mutateStringWithNew(const string &query, size_t pos, const string &old_value, const string &new_value)
 {
-    std::string mutated_query = query;
+    string mutated_query = query;
     mutated_query.replace(pos, old_value.length(), new_value);
     return mutated_query;
 }
 
-void Mutator::UOI_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode)
+tuple<string, int> findFirstChar(const string &query, int position, bool moveRight, size_t character_length = 1, size_t word_count = 1)
+{
+    if (position < 0 || position >= static_cast<int>(query.length()))
+    {
+        throw std::out_of_range("Position is out of range of the string.");
+    }
+
+    size_t mover = 0;
+    if (moveRight)
+    {
+        mover = 1;
+    }
+    else
+    {
+        mover = -1;
+    }
+
+    string output = "";
+    bool foundSecondSpace = false;
+    bool foundFirstChar = false;
+    size_t found_word_count = 0;
+    for (size_t i = position + mover; i < query.length() - 1; i = i + mover)
+    {
+        if (foundFirstChar && foundSecondSpace && found_word_count >= word_count)
+        {
+            return std::make_tuple(output, i - (mover * 2));
+        }
+
+        if (!std::isspace(query[i]))
+        {
+            foundFirstChar = true;
+            if (character_length > output.length() || character_length == 0)
+            {
+                if (moveRight)
+                    output += query[i];
+                else
+                    output = query[i] + output;
+            }
+            else
+            {
+                return std::make_tuple(output, i - (mover * 2));
+            }
+        }
+        else
+        {
+            if (foundFirstChar)
+            {
+                if (foundSecondSpace)
+                {
+                    output += " ";
+                }
+                found_word_count++;
+                foundSecondSpace = true;
+            }
+        }
+    }
+    return std::make_tuple(output, query.length() - 1 - output.length());
+}
+
+void Mutator::UOI_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode)
 {
     /**
      * @brief Each arithmetic expression or reference to a number e is replaced by -e, e + 1 and e - 1. References to numbers are not mutated either inside of GROUP BY and ORDER BY clauses or in the select-list of an EXISTS subquery.
      *
      */
 
-    std::string processed_query = query;
+    string processed_query = query;
+    string mutated_query = query;
     std::transform(processed_query.begin(), processed_query.end(), processed_query.begin(), ::tolower);
+    std::transform(mutated_query.begin(), mutated_query.end(), mutated_query.begin(), ::tolower);
 
     std::regex number_regex(R"((\b\d+\b))");
     std::smatch match;
 
-    while (std::regex_search(processed_query, match, number_regex))
+    size_t start_index = 0;
+
+    std::sregex_iterator iter(processed_query.begin() + start_index, processed_query.end(), number_regex);
+    std::sregex_iterator end;
+
+    for (; iter != end; ++iter)
     {
-        std::string number = match.str(0);
-        size_t number_pos = match.position(0);
+        string number_str = iter->str();
+        int number = std::stoi(number_str);
+        size_t number_pos = iter->position() + start_index;
+        if (std::get<0>(findFirstChar(processed_query, number_pos, false)) == "<" || std::get<0>(findFirstChar(processed_query, number_pos, false)) == ">" || std::get<0>(findFirstChar(processed_query, number_pos, false)) == "=")
+        {
+            string mutation_neg = mutateStringWithNew(mutated_query, number_pos, number_str, std::to_string(-number));
+            mutantTreeNode->AddMutantChildren(mutation_neg);
+            mutationData.mutated_queries.push_back(mutation_neg);
+        }
 
-        std::string mutation_neg = mutateStringWithNew(processed_query, number_pos, number, "-" + number);
-        mutantTreeNode->AddMutantChildren(mutation_neg);
-        mutationData.mutated_queries.push_back(mutation_neg);
-
-        std::string mutation_add = mutateStringWithNew(processed_query, number_pos, number, number + "+1");
+        string mutation_add = mutateStringWithNew(mutated_query, number_pos, number_str, std::to_string(number + 2));
         mutantTreeNode->AddMutantChildren(mutation_add);
         mutationData.mutated_queries.push_back(mutation_add);
 
-        std::string mutation_sub = mutateStringWithNew(processed_query, number_pos, number, number + "-1");
+        string mutation_sub = mutateStringWithNew(mutated_query, number_pos, number_str, std::to_string(number - 2));
         mutantTreeNode->AddMutantChildren(mutation_sub);
         mutationData.mutated_queries.push_back(mutation_sub);
-
-        processed_query = match.suffix().str();
     }
 }
 
-void Mutator::JOI_operator(std::string query, MutationData &mutationData, TreeNode *mutantTree)
+void Mutator::AOR_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode)
+{
+    /**
+     * @brief Each arithmetic operator is replaced by each of the other arithmetic operators.
+     *
+     */
+
+    string processed_query = query;
+    std::transform(processed_query.begin(), processed_query.end(), processed_query.begin(), ::tolower);
+
+    const string arithmetic_operators[] = {"+", "-", "*", "/"};
+    for (size_t i = 0; i < processed_query.length(); i++)
+    {
+        switch (processed_query[i])
+        {
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+        {
+            for (auto replacing_operator : arithmetic_operators)
+            {
+                if (processed_query[i] == replacing_operator[0])
+                    continue;
+
+                if (std::isalnum(std::get<0>(findFirstChar(processed_query, i, false))[0]) && std::isalnum(std::get<0>(findFirstChar(processed_query, i, true))[0]))
+                {
+                    processed_query.replace(i, 1, replacing_operator);
+                    // cout << "Operator: " << processed_query << endl;
+                    mutantTreeNode->AddMutantChildren(processed_query);
+                    mutationData.mutated_queries.push_back(processed_query);
+                }
+            }
+
+            break;
+        }
+
+        default:
+            break;
+        }
+    }
+}
+
+void Mutator::JOI_operator(string query, MutationData &mutationData, TreeNode *mutantTree)
 {
     /**
      * LEFT JOIN
@@ -439,22 +556,22 @@ void Mutator::JOI_operator(std::string query, MutationData &mutationData, TreeNo
      * ANTI JOIN
      */
 
-    std::string lower_query = query;
+    string lower_query = query;
     std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
     size_t join_pos_exist = lower_query.find(" join ");
-    if (join_pos_exist != std::string::npos)
+    if (join_pos_exist != string::npos)
     {
         // std::cout << "JOIN CLAUSE EXISTS: " << query << std::endl;
         // join clause exists
         mutantTree->AddMutantChildren(query);
-        const std::string join_types[] = {"left", "right", "full", "semi", "anti"};
+        const string join_types[] = {"left", "right", "full", "semi", "anti"};
         size_t join_pos = lower_query.find("join");
 
         for (size_t i = 0; i < join_types->size(); i++)
         {
-            const std::string &type = join_types[i];
+            const string &type = join_types[i];
             size_t type_pos = lower_query.rfind(type, join_pos - 1); // Search before "join"
-            if (type_pos != std::string::npos)
+            if (type_pos != string::npos)
             {
                 // cout << "join exists" << endl;
                 // Ensure the found type is immediately before "join"
@@ -488,7 +605,55 @@ void Mutator::JOI_operator(std::string query, MutationData &mutationData, TreeNo
     }
 }
 
-void Mutator::InternalMutate(std::string &query, MutationData &mutationData, TreeNode *mutantTreeNode, MutationOperator operatr)
+void Mutator::BTW_Operator(string query, MutationData &mutationData, TreeNode *mutantTree)
+{
+    string lower_query = query;
+
+    size_t between_position = findClause(lower_query, "between");
+    size_t not_between_position = findClause(lower_query, "not between");
+
+    if (between_position == lower_query.length())
+    {
+        return;
+    }
+
+    size_t and_position = findClause(lower_query, " and ", between_position + 6);
+    string left_clause = std::get<0>(findFirstChar(lower_query, and_position + 1, false, 0, 1));
+    auto [right_clause, right_clause_pos] = findFirstChar(lower_query, and_position + 3, true, 0, 1);
+
+    if (not_between_position == lower_query.length())
+    {
+        auto [column_clause, column_clause_pos] = findFirstChar(lower_query, between_position, false, 0, 1);
+        string mutated_clause = column_clause + ">" + left_clause + " AND " + column_clause + "<=" + right_clause;
+        lower_query = query;
+        lower_query.replace(column_clause_pos, right_clause_pos + right_clause.length() - column_clause_pos, mutated_clause);
+        mutantTree->AddMutantChildren(lower_query);
+        mutationData.mutated_queries.push_back(lower_query);
+
+        mutated_clause = column_clause + ">=" + left_clause + " AND " + column_clause + "<" + right_clause;
+        string lower_query = query;
+        lower_query.replace(column_clause_pos, right_clause_pos + right_clause.length() - column_clause_pos, mutated_clause);
+        mutantTree->AddMutantChildren(lower_query);
+        mutationData.mutated_queries.push_back(lower_query);
+    }
+    else
+    {
+        auto [column_clause, column_clause_pos] = findFirstChar(lower_query, not_between_position, false, 0, 1);
+        string mutated_clause = column_clause + "<" + left_clause + " OR " + column_clause + ">=" + right_clause;
+        lower_query = query;
+        lower_query.replace(column_clause_pos, right_clause_pos + right_clause.length() - column_clause_pos, mutated_clause);
+        mutantTree->AddMutantChildren(lower_query);
+        mutationData.mutated_queries.push_back(lower_query);
+
+        mutated_clause = column_clause + "<=" + left_clause + " OR " + column_clause + ">" + right_clause;
+        string lower_query = query;
+        lower_query.replace(column_clause_pos, right_clause_pos + right_clause.length() - column_clause_pos, mutated_clause);
+        mutantTree->AddMutantChildren(lower_query);
+        mutationData.mutated_queries.push_back(lower_query);
+    }
+}
+
+void Mutator::InternalMutate(string &query, MutationData &mutationData, TreeNode *mutantTreeNode, MutationOperator operatr)
 {
     switch (operatr)
     {
@@ -498,10 +663,18 @@ void Mutator::InternalMutate(std::string &query, MutationData &mutationData, Tre
         SEL_operator(query, mutationData, mutantTreeNode);
         // std::cout << "After select mutation for query: " << query << std::endl;
         // std::cout << "Select Mutant Count: " << mutantTreeNode->children.size() << std::endl;
-        for (auto childMutantTreeNode : mutantTreeNode->children)
+        if (mutantTreeNode->children.size() == 0)
         {
-            // std::cout << "Mutant Select: " << childMutantTreeNode->query << std::endl;
-            InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::JOIN);
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::JOIN);
+        }
+        else
+        {
+
+            for (auto childMutantTreeNode : mutantTreeNode->children)
+            {
+                // std::cout << "Mutant Select: " << childMutantTreeNode->query << std::endl;
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::JOIN);
+            }
         }
         break;
     }
@@ -510,28 +683,90 @@ void Mutator::InternalMutate(std::string &query, MutationData &mutationData, Tre
         JOI_operator(query, mutationData, mutantTreeNode);
         // std::cout << "After Join Mutation for: " << query << std::endl;
         // std::cout << "Join Mutant Count: " << mutantTreeNode->children.size() << std::endl;
-        for (auto childMutantTreeNode : mutantTreeNode->children)
+        if (mutantTreeNode->children.size() == 0)
         {
-            // std::cout << "Mutant Join: " << childMutantTreeNode->query << std::endl;
-            InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::RELATIONAL_OR);
+            // InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::RELATIONAL_OR);
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::BTW_OP);
+        }
+        else
+        {
+
+            for (auto childMutantTreeNode : mutantTreeNode->children)
+            {
+                // std::cout << "Mutant Join: " << childMutantTreeNode->query << std::endl;
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::BTW_OP);
+            }
         }
         // std::cout << "Internal Mutation Completed for JOIN" << std::endl;
+        break;
+    }
+    case MutationOperator::BTW_OP:
+    {
+        BTW_Operator(query, mutationData, mutantTreeNode);
+        if (mutantTreeNode->children.size() == 0)
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::RELATIONAL_OR);
+        else
+        {
+            for (auto childMutantTreeNode : mutantTreeNode->children)
+            {
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::RELATIONAL_OR);
+            }
+        }
         break;
     }
     case MutationOperator::RELATIONAL_OR:
     {
         ROR_Operator(query, mutationData, mutantTreeNode);
         // std::cout << "ROR Mutant Count: " << mutantTreeNode->children.size() << std::endl;
-        for (auto childMutantTreeNode : mutantTreeNode->children)
+        if (mutantTreeNode->children.size() == 0)
         {
-            // std::cout << "Mutant ROR: " << childMutantTreeNode->query << std::endl;
-            InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::UNARY_IOR);
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::UNARY_IOR);
+        }
+        else
+        {
+            for (auto childMutantTreeNode : mutantTreeNode->children)
+            {
+                // std::cout << "Mutant ROR: " << childMutantTreeNode->query << std::endl;
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::UNARY_IOR);
+            }
         }
         break;
     }
     case MutationOperator::UNARY_IOR:
     {
         UOI_Operator(query, mutationData, mutantTreeNode);
+
+        if (mutantTreeNode->children.size() == 0)
+        {
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::LOGICAL_AOR);
+        }
+        else
+        {
+            for (auto childMutantTreeNode : mutantTreeNode->children)
+            {
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::LOGICAL_AOR);
+            }
+        }
+        break;
+    }
+    case MutationOperator::LOGICAL_AOR:
+    {
+        AOR_Operator(query, mutationData, mutantTreeNode);
+
+        if (mutantTreeNode->children.size() == 0)
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::LKE_OP);
+        else
+        {
+            for (auto childMutantTreeNode : mutantTreeNode->children)
+            {
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::LKE_OP);
+            }
+        }
+        break;
+    }
+    case MutationOperator::LKE_OP:
+    {
+        break;
     }
     default:
     {

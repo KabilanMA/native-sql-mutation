@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 #include <thread>
+#include <tuple>
 
 using std::cin;
 using std::cout;
@@ -15,6 +16,7 @@ using std::flush;
 using std::getline;
 using std::string;
 using std::thread;
+using std::tuple;
 using std::unique_ptr;
 using std::vector;
 
