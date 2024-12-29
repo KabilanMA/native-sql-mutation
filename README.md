@@ -21,3 +21,5 @@
 10. SELECT col1 FROM my_table WHERE id<10 ORDER BY name;
 11. SELECT id, name FROM my_table WHERE id<10;
 12. SELECT col1 FROM table WHERE id BETWEEN 10 AND 20;
+13. SELECT id FROM table WHERE name LIKE 'kabilan';
+14. SELECT address, AVG(DISTINCT age) AS avg_distinct_age FROM my_table GROUP BY address HAVING AVG(DISTINCT age)<28;

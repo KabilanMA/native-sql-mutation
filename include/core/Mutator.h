@@ -22,7 +22,9 @@ enum MutationOperator
     UNARY_IOR,
     LOGICAL_AOR,
     BTW_OP,
-    LKE_OP
+    LKE_OP,
+    NLF_PRE,
+    AGR_OP
 };
 
 class Mutator
@@ -30,14 +32,17 @@ class Mutator
 public:
     void Mutate(MutationData &mutationData, TreeNode *mutantTreeNode = nullptr);
 
-    void SEL_operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
-    void JOI_operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
-    void ROR_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
-    void UOI_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
-    void AOR_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode);
-    void BTW_Operator(std::string query, MutationData &mutationData, TreeNode *mutantTree);
+    void SEL_operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void JOI_operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void ROR_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void UOI_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void AOR_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void BTW_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void LKE_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode, int type = 1);
+    void NFL_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode);
+    void AGR_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode, size_t start_pos = 0);
 
 private:
-    void InternalMutate(std::string &query, MutationData &mutationData, TreeNode *mutantTree, MutationOperator operatr);
-    void ROR_OperatorComplex(std::string query, MutationData &mutationData, TreeNode *mutantTreeNode, std::string clause);
+    void InternalMutate(string &query, MutationData &mutationData, TreeNode *mutantTree, MutationOperator operatr);
+    void ROR_OperatorComplex(string query, MutationData &mutationData, TreeNode *mutantTreeNode, string clause);
 };

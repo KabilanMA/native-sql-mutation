@@ -373,14 +373,15 @@ void Mutator::ROR_Operator(string query, MutationData &mutationData, TreeNode *m
 size_t findClause(const string &query, const string &clause, size_t start_pos = 0, size_t end_pos = 0)
 {
     if (end_pos == 0 || end_pos < start_pos)
-    {
         end_pos = string::npos;
-    }
+    std::string lower_query = query;
+    std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
 
-    size_t character_counts_search = (end_pos == string::npos) ? (query.length() - start_pos) : end_pos - start_pos;
-    size_t substring_pos = query.substr(start_pos, character_counts_search).find(clause);
+    size_t character_counts_search = (end_pos == string::npos) ? (lower_query.length() - start_pos) : end_pos - start_pos;
+    end_pos = (end_pos == string::npos) ? lower_query.length() - 1 : end_pos;
+    size_t substring_pos = lower_query.substr(start_pos, character_counts_search).find(clause);
     size_t pos = (substring_pos != string::npos) ? start_pos + substring_pos : string::npos;
-    return (pos != string::npos && pos < end_pos) ? pos : query.length();
+    return (pos != string::npos && pos < end_pos) ? pos : lower_query.length();
 }
 
 static string excludeClauses(const string &query, size_t group_by_pos, size_t order_by_pos)
@@ -545,6 +546,274 @@ void Mutator::AOR_Operator(string query, MutationData &mutationData, TreeNode *m
     }
 }
 
+std::tuple<size_t, string> findFunctionPosition(const std::string &query, const std::string &functionName, size_t start, size_t end)
+{
+    if (start >= query.length() || start >= end)
+    {
+        return std::make_tuple(query.length(), "");
+    }
+
+    // Create the regex pattern: functionName followed by '(' and anything inside '()'
+    std::string pattern = functionName + R"(\s*\([^)]*\))";
+    std::regex functionRegex(pattern, std::regex_constants::icase);
+    std::smatch match;
+
+    std::string subQuery = query.substr(start, end - start);
+
+    if (std::regex_search(subQuery, match, functionRegex))
+        return std::make_tuple(start + match.position(0), match.str(0));
+
+    return std::make_tuple(query.length(), "");
+}
+
+void Mutator::AGR_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode, size_t start_pos)
+{
+    string mutated_query = query;
+    vector<string> aggregate_functions = {"SUM", "AVG", "COUNT", "MIN", "MAX"};
+    if (query.length() - 1 <= start_pos)
+        return;
+
+    for (const auto &function : aggregate_functions)
+    {
+        auto [function_pos, found_function] = findFunctionPosition(mutated_query, function, start_pos, mutated_query.length());
+        if (function_pos >= mutated_query.length())
+        {
+            continue;
+        }
+        size_t search_start_pos = function_pos + function.length();
+        size_t distinct_clause = findClause(found_function, "distinct");
+        for (const auto &mutating_function : aggregate_functions)
+        {
+            // if both mutating and original functions are same, skip for MIN AND MAX and add mutate DISTINCT for other
+            if (mutating_function == function)
+            {
+                if (function == "MAX" || function == "MIN")
+                    continue;
+                else
+                {
+                    string processed_query = query;
+                    if (distinct_clause == found_function.length())
+                    {
+                        // distinct clause does not exist
+                        processed_query.insert(search_start_pos + 1, "DISTINCT ");
+                    }
+                    else
+                    {
+                        // distinct clause exists
+                        processed_query.erase(search_start_pos + 1, 9);
+                    }
+                    mutantTreeNode->AddMutantChildren(processed_query);
+                    mutationData.mutated_queries.push_back(processed_query);
+                    // call the recrusive function to find other functions in the remaining part of the mutated query
+                    AGR_Operator(processed_query, mutationData, mutantTreeNode, function_pos + mutating_function.length());
+                }
+            }
+            else
+            {
+                if (mutating_function == "MAX" || mutating_function == "MIN")
+                {
+                    string processed_query = query;
+                    processed_query.replace(function_pos, function.length(), mutating_function);
+                    if (distinct_clause != found_function.length())
+                    {
+                        // distinct clause exists
+                        processed_query.erase(search_start_pos + 1, 9);
+                    }
+                    mutantTreeNode->AddMutantChildren(processed_query);
+                    mutationData.mutated_queries.push_back(processed_query);
+                    AGR_Operator(processed_query, mutationData, mutantTreeNode, function_pos + mutating_function.length());
+                }
+                else
+                {
+                    string processed_query = query;
+                    // cout << "processed_query before 3: " << processed_query << endl;
+                    processed_query.replace(function_pos, function.length(), mutating_function);
+                    mutantTreeNode->AddMutantChildren(processed_query);
+                    mutationData.mutated_queries.push_back(processed_query);
+                    AGR_Operator(processed_query, mutationData, mutantTreeNode, function_pos + mutating_function.length());
+
+                    if (distinct_clause == found_function.length())
+                    {
+                        // distinct clause does not exist
+                        processed_query.insert(function_pos + mutating_function.length() + 1, "DISTINCT ");
+                    }
+                    else
+                    {
+                        // distinct clause exists
+                        processed_query.erase(function_pos + mutating_function.length() + 1, 9);
+                    }
+                    mutantTreeNode->AddMutantChildren(processed_query);
+                    mutationData.mutated_queries.push_back(processed_query);
+                    AGR_Operator(processed_query, mutationData, mutantTreeNode, function_pos + mutating_function.length());
+                }
+            }
+        }
+    }
+}
+
+void Mutator::NFL_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode)
+{
+    string lower_query = query;
+    std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
+
+    size_t null_pos = findClause(lower_query, " is null ");
+    if (null_pos == lower_query.length())
+    {
+        size_t not_null_pos = findClause(lower_query, " is not null ");
+        if (not_null_pos == lower_query.length())
+        {
+            return;
+        }
+        else
+        {
+            string mutated_query = query;
+            mutated_query.replace(not_null_pos, 13, " IS NULL ");
+            mutantTreeNode->AddMutantChildren(mutated_query);
+            mutationData.mutated_queries.push_back(mutated_query);
+        }
+    }
+    else
+    {
+        string mutated_query = query;
+        mutated_query.replace(null_pos, 9, " IS NOT NULL ");
+        mutantTreeNode->AddMutantChildren(mutated_query);
+        mutationData.mutated_queries.push_back(mutated_query);
+    }
+    return;
+}
+
+void Mutator::LKE_Operator(string query, MutationData &mutationData, TreeNode *mutantTreeNode, int type)
+{
+    string lower_query = query;
+    std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(), ::tolower);
+
+    size_t like_position = findClause(lower_query, " like ");
+    if (like_position == lower_query.length())
+    {
+        return;
+    }
+
+    like_position++;
+    auto [pattern, pattern_pos] = findFirstChar(lower_query, like_position + 4, true, 0, 1);
+    string pattern_og = pattern;
+    string mutated_query;
+
+    switch (type)
+    {
+    case 1:
+    {
+        for (size_t i = 1; i < pattern_og.length() - 1; i++)
+        {
+            if (pattern_og[i] == '%' || pattern_og[i] == '_')
+            {
+                mutated_query = query;
+                mutated_query.erase(i, 1);
+                mutantTreeNode->AddMutantChildren(mutated_query);
+                mutationData.mutated_queries.push_back(mutated_query);
+                LKE_Operator(mutated_query, mutationData, mutantTreeNode, 2);
+            }
+        }
+        LKE_Operator(query, mutationData, mutantTreeNode, 2);
+        break;
+    }
+    case 2:
+    {
+        for (size_t i = 1; i < pattern_og.length() - 1; i++)
+        {
+            if (pattern_og[i] == '%')
+            {
+                pattern.replace(i, 1, "_");
+                mutated_query = query;
+                mutated_query.replace(pattern_pos, pattern_og.length(), pattern);
+                mutantTreeNode->AddMutantChildren(mutated_query);
+                mutationData.mutated_queries.push_back(mutated_query);
+                LKE_Operator(mutated_query, mutationData, mutantTreeNode, 3);
+            }
+            else if (pattern_og[i] == '_')
+            {
+                pattern.replace(i, 1, "%");
+                mutated_query = query;
+                mutated_query.replace(pattern_pos, pattern_og.length(), pattern);
+                mutantTreeNode->AddMutantChildren(mutated_query);
+                mutationData.mutated_queries.push_back(mutated_query);
+                LKE_Operator(mutated_query, mutationData, mutantTreeNode, 3);
+            }
+        }
+        LKE_Operator(query, mutationData, mutantTreeNode, 3);
+        break;
+    }
+    case 3:
+    {
+        for (size_t i = 2; i < pattern_og.length() - 1; i++)
+        {
+            if (pattern_og[i] == '%' || pattern_og[i] == '_')
+            {
+                mutated_query = query;
+                mutated_query.erase(i - 1, 1);
+                mutantTreeNode->AddMutantChildren(mutated_query);
+                mutationData.mutated_queries.push_back(mutated_query);
+                LKE_Operator(mutated_query, mutationData, mutantTreeNode, 4);
+            }
+        }
+        LKE_Operator(query, mutationData, mutantTreeNode, 4);
+        break;
+    }
+    case 4:
+    {
+        for (size_t i = 1; i < pattern_og.length() - 2; i++)
+        {
+            if (pattern_og[i] == '%' || pattern_og[i] == '_')
+            {
+                mutated_query = query;
+                mutated_query.erase(i + 1, 1);
+                mutantTreeNode->AddMutantChildren(mutated_query);
+                mutationData.mutated_queries.push_back(mutated_query);
+                LKE_Operator(mutated_query, mutationData, mutantTreeNode, 5);
+            }
+        }
+        LKE_Operator(query, mutationData, mutantTreeNode, 5);
+        break;
+    }
+    case 5:
+    {
+        if (pattern_og[1] != '%' && pattern_og[1] != '_')
+        {
+            mutated_query = query;
+            mutated_query.insert(pattern_pos + 1, "%");
+            mutantTreeNode->AddMutantChildren(mutated_query);
+            mutationData.mutated_queries.push_back(mutated_query);
+            LKE_Operator(mutated_query, mutationData, mutantTreeNode, 6);
+
+            mutated_query = query;
+            mutated_query.insert(pattern_pos + 1, "_");
+            mutantTreeNode->AddMutantChildren(mutated_query);
+            mutationData.mutated_queries.push_back(mutated_query);
+            LKE_Operator(mutated_query, mutationData, mutantTreeNode, 6);
+        }
+        LKE_Operator(query, mutationData, mutantTreeNode, 6);
+        break;
+    }
+    case 6:
+    {
+        if (pattern_og[pattern_og.length() - 2] != '%' && pattern_og[pattern_og.length() - 2] != '_')
+        {
+            mutated_query = query;
+            mutated_query.insert(pattern_pos + pattern_og.length() - 1, "%");
+            mutantTreeNode->AddMutantChildren(mutated_query);
+            mutationData.mutated_queries.push_back(mutated_query);
+
+            mutated_query = query;
+            mutated_query.insert(pattern_pos + pattern_og.length() - 1, "_");
+            mutantTreeNode->AddMutantChildren(mutated_query);
+            mutationData.mutated_queries.push_back(mutated_query);
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 void Mutator::JOI_operator(string query, MutationData &mutationData, TreeNode *mutantTree)
 {
     /**
@@ -665,7 +934,7 @@ void Mutator::InternalMutate(string &query, MutationData &mutationData, TreeNode
         // std::cout << "Select Mutant Count: " << mutantTreeNode->children.size() << std::endl;
         if (mutantTreeNode->children.size() == 0)
         {
-            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::JOIN);
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::AGR_OP);
         }
         else
         {
@@ -673,7 +942,7 @@ void Mutator::InternalMutate(string &query, MutationData &mutationData, TreeNode
             for (auto childMutantTreeNode : mutantTreeNode->children)
             {
                 // std::cout << "Mutant Select: " << childMutantTreeNode->query << std::endl;
-                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::JOIN);
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::AGR_OP);
             }
         }
         break;
@@ -766,7 +1035,39 @@ void Mutator::InternalMutate(string &query, MutationData &mutationData, TreeNode
     }
     case MutationOperator::LKE_OP:
     {
+        LKE_Operator(query, mutationData, mutantTreeNode, 1);
+        if (mutantTreeNode->children.size() == 0)
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::NLF_PRE);
+        else
+        {
+            for (auto childMutantTreeNode : mutantTreeNode->children)
+            {
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::NLF_PRE);
+            }
+        }
         break;
+    }
+    case MutationOperator::NLF_PRE:
+    {
+        NFL_Operator(query, mutationData, mutantTreeNode);
+        if (mutantTreeNode->children.size() == 0)
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::AGR_OP);
+        else
+        {
+            for (auto childMutantTreeNode : mutantTreeNode->children)
+            {
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::AGR_OP);
+            }
+        }
+        break;
+    }
+    case MutationOperator::AGR_OP:
+    {
+        AGR_Operator(query, mutationData, mutantTreeNode);
+        for (auto &childmutant : mutantTreeNode->children)
+        {
+            cout << childmutant->query << endl;
+        }
     }
     default:
     {
