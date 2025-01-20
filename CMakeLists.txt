@@ -21,4 +21,4 @@ add_executable(mutant
 )
 
 # Link DuckDB library
-target_link_libraries(mutant PRIVATE duckdb)
+target_link_libraries(mutant PRIVATE duckdb readline)

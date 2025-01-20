@@ -5,16 +5,19 @@
 #include <atomic>
 #include "duckdb.h"
 #include "core/Comparator.h"
+#include <readline/readline.h>
+#include <readline/history.h>
 
 int main()
 {
-    string query;
     std::atomic<bool> is_processing{false};
+
+    std::cout << "Welcome to mud REPL!\nType 'exit' to quit.\n";
 
     while (true)
     {
-        cout << "mutant> ";
-        getline(cin, query);
+        char *input = readline("mud> ");
+        string query(input);
 
         if (query == "exit")
         {
@@ -22,51 +25,55 @@ int main()
             break;
         }
 
-        // is_processing = true;
-        // thread spinner_thread(CLI::Spinner, ref(is_processing));
+        if (query.empty())
+        {
+            continue;
+        }
+        add_history(query.c_str());
 
         MutationData mutationData(query);
         CLI::ProcessQuery(mutationData);
         cout << "Total Mutant Count: " << mutationData.mutated_queries.size() << endl;
 
-        // duckdb_database db;
-        // duckdb_connection con;
-        // if (duckdb_open(NULL, &db) == DuckDBError)
-        // {
-        //     cout << "DUCKDB database open error" << endl;
-        // }
-        // if (duckdb_connect(db, &con) == DuckDBError)
-        // {
-        //     cout << "DUCKDB connection error" << endl;
-        // }
+        duckdb_database db;
+        duckdb_connection con;
+        if (duckdb_open(NULL, &db) == DuckDBError)
+        {
+            cout << "DUCKDB database open error" << endl;
+        }
+        if (duckdb_connect(db, &con) == DuckDBError)
+        {
+            cout << "DUCKDB connection error" << endl;
+        }
 
-        // duckdb_result original_result;
-        // if (duckdb_query(con, query.c_str(), &original_result) != DuckDBSuccess)
-        // {
-        //     std::cerr << "Failed to execute the original query!" << std::endl;
-        //     duckdb_disconnect(&con);
-        //     duckdb_close(&db);
-        //     return 1;
-        // }
+        duckdb_result original_result;
+        if (duckdb_query(con, query.c_str(), &original_result) != DuckDBSuccess)
+        {
+            std::cerr << "Failed to execute the original query!" << std::endl;
+            duckdb_disconnect(&con);
+            duckdb_close(&db);
+            return 1;
+        }
 
-        // Comparator comparator(original_result);
+        Comparator comparator(original_result);
 
-        // for (auto mutant : mutationData.mutated_queries)
-        // {
-        //     duckdb_result cmp_result;
-        //     if (duckdb_query(con, mutant.c_str(), &cmp_result) != DuckDBSuccess)
-        //     {
-        //         std::cerr << "Failed to execute the original query!" << std::endl;
-        //         duckdb_disconnect(&con);
-        //         duckdb_close(&db);
-        //         return 1;
-        //     }
-        //     if (comparator.is_equal_to_original(cmp_result))
-        //     {
-        //         cout << mutant << endl;
-        //     }
-        //     duckdb_destroy_result(&cmp_result);
-        // }
+        for (auto mutant : mutationData.mutated_queries)
+        {
+            duckdb_result cmp_result;
+            if (duckdb_query(con, mutant.c_str(), &cmp_result) != DuckDBSuccess)
+            {
+                std::cerr << "Failed to execute the mutated query: " << mutant << std::endl;
+            }
+            if (comparator.is_equal_to_original(cmp_result))
+            {
+                cout << "Living Mutants: " << mutant << endl;
+            }
+            duckdb_destroy_result(&cmp_result);
+        }
+
+        duckdb_destroy_result(&original_result);
+        duckdb_disconnect(&con);
+        duckdb_close(&db);
 
         // Additional queries to compare
         // std::vector<std::string> additional_queries = {
@@ -109,14 +116,10 @@ int main()
 
         // cout << comparator.is_equal_to_original(cmp_result) << endl;
 
-        // // Clean up
-        // duckdb_destroy_result(&original_result);
-        // duckdb_destroy_result(&cmp_result);
-        // duckdb_disconnect(&con);
-        // duckdb_close(&db);
-
-        // is_processing = false;
-        // spinner_thread.join();
+        // Clean up
+        duckdb_destroy_result(&original_result);
+        duckdb_disconnect(&con);
+        duckdb_close(&db);
 
         // cout << "Done processing the Query: " << query << endl;
         break;

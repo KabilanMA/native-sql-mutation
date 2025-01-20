@@ -934,7 +934,7 @@ void Mutator::InternalMutate(string &query, MutationData &mutationData, TreeNode
         // std::cout << "Select Mutant Count: " << mutantTreeNode->children.size() << std::endl;
         if (mutantTreeNode->children.size() == 0)
         {
-            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::AGR_OP);
+            InternalMutate(query, mutationData, mutantTreeNode, MutationOperator::JOIN);
         }
         else
         {
@@ -942,7 +942,7 @@ void Mutator::InternalMutate(string &query, MutationData &mutationData, TreeNode
             for (auto childMutantTreeNode : mutantTreeNode->children)
             {
                 // std::cout << "Mutant Select: " << childMutantTreeNode->query << std::endl;
-                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::AGR_OP);
+                InternalMutate(childMutantTreeNode->query, mutationData, childMutantTreeNode, MutationOperator::JOIN);
             }
         }
         break;
@@ -1064,10 +1064,6 @@ void Mutator::InternalMutate(string &query, MutationData &mutationData, TreeNode
     case MutationOperator::AGR_OP:
     {
         AGR_Operator(query, mutationData, mutantTreeNode);
-        for (auto &childmutant : mutantTreeNode->children)
-        {
-            cout << childmutant->query << endl;
-        }
     }
     default:
     {
